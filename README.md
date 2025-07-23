@@ -16,6 +16,8 @@ Here are some ideas to get you started:
 -->
 # whoami
 focus on test.
+<iframe src="https://tryhackme.com/api/v2/badges/public-profile?userPublicId=3456237" style='border:none;'></iframe>
+
 # eBPF 编程 28 天学习计划打卡表
 
 > 适用于只懂一点 Java 的测试工程师，每天仅需投入 10 分钟。
