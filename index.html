@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>字帖生成工具 - 多页打印修复版</title>
+    <title>字帖生成工具 - 修复版</title>
     <style>
         * {
             box-sizing: border-box;
@@ -288,7 +288,7 @@
 <body>
     <div class="container">
         <header>
-            <h1>字帖生成工具 - 多页打印修复版</h1>
+            <h1>字帖生成工具 - 修复版</h1>
             <p class="subtitle">创建个性化字帖，支持多页打印</p>
         </header>
         
@@ -306,9 +306,9 @@
                     <select id="font-family">
                         <option value="SimSun">宋体</option>
                         <option value="SimHei">黑体</option>
-                        <option value="KaiTi">楷体</option>
+                        <option value="KaiTi" selected>楷体</option>
                         <option value="FangSong">仿宋</option>
-                        <option value="Microsoft YaHei" selected>微软雅黑</option>
+                        <option value="Microsoft YaHei">微软雅黑</option>
                     </select>
                     
                     <label for="grid-type">格子类型</label>
@@ -380,7 +380,7 @@
         </div>
         
         <footer>
-            <p>© 2023 字帖生成工具 | 支持多页打印 | 响应式设计</p>
+            <p>© 2025 字帖生成工具 | 支持多页打印 | 响应式设计</p>
         </footer>
     </div>
 
@@ -555,22 +555,20 @@
                 const selectedGridType = gridType.value;
                 const selectedPracticeMode = practiceMode.value;
                 const size = parseInt(fontSize.value);
-                const gridsRow = parseInt(gridsPerRow.value);
+                const gridsRow = parseInt(gridsPerRow.value); // 用户设置的每行格子数
                 const fColor = fontColor.value;
                 const gColor = gridColor.value;
                 
-                // 计算格子大小
-                const gridSize = size * 2;
-                
-                // 计算每页可容纳的行数和列数
+                // 计算格子大小 - 根据用户设置的每行格子数和A4宽度计算
                 const availableWidth = A4_WIDTH - (PAGE_MARGIN * 2);
-                const availableHeight = A4_HEIGHT - (PAGE_MARGIN * 2);
+                const gridSize = availableWidth / gridsRow;
                 
-                const cols = Math.floor(availableWidth / gridSize);
+                // 计算每页可容纳的行数
+                const availableHeight = A4_HEIGHT - (PAGE_MARGIN * 2);
                 const rows = Math.floor(availableHeight / gridSize);
                 
                 // 计算总页数
-                const charsPerPage = cols * rows;
+                const charsPerPage = gridsRow * rows;
                 totalPages = Math.ceil(text.length / charsPerPage);
                 
                 // 重置页面数据
@@ -589,7 +587,7 @@
                     
                     pagesData.push({
                         text: pageText,
-                        cols: cols,
+                        cols: gridsRow, // 使用用户设置的每行格子数
                         rows: rows,
                         gridSize: gridSize,
                         font: selectedFont,
@@ -714,7 +712,10 @@
             
             // 绘制描红文字
             function drawTraceText(ctx, text, gridSize, cols, size, color, font) {
-                ctx.font = `bold ${size}px ${font}`;
+                // 确保字体大小不超过格子大小的80%
+                const actualFontSize = Math.min(size, gridSize * 0.8);
+                
+                ctx.font = `bold ${actualFontSize}px ${font}`;
                 ctx.fillStyle = color;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
@@ -739,7 +740,10 @@
             
             // 绘制文章模式文字
             function drawArticleText(ctx, text, gridSize, cols, size, color, font) {
-                ctx.font = `${size}px ${font}`;
+                // 确保字体大小不超过格子大小的80%
+                const actualFontSize = Math.min(size, gridSize * 0.8);
+                
+                ctx.font = `${actualFontSize}px ${font}`;
                 ctx.fillStyle = color;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
