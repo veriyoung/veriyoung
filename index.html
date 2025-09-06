@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>字帖生成工具 - 多页打印修复版</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4efe9 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: #fff;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(90deg, #2c3e50 0%, #4ca1af 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 5px;
+        }
+        
+        .subtitle {
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+        
+        .settings-panel {
+            padding: 20px;
+            background-color: #f9f9f9;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+        
+        .setting-group {
+            margin-bottom: 15px;
+        }
+        
+        .setting-group h2 {
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+            color: #2c3e50;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #2c3e50;
+            font-size: 0.9rem;
+        }
+        
+        input, select, textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 0.9rem;
+        }
+        
+        textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+        
+        .color-group {
+            display: flex;
+            align-items: center;
+        }
+        
+        .color-preview {
+            width: 25px;
+            height: 25px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-left: 8px;
+        }
+        
+        .range-value {
+            display: inline-block;
+            width: 50px;
+            text-align: center;
+            background: #f0f0f0;
+            padding: 3px;
+            border-radius: 3px;
+            margin-left: 8px;
+            font-size: 0.9rem;
+        }
+        
+        button {
+            background: linear-gradient(90deg, #2c3e50 0%, #4ca1af 100%);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .print-btn {
+            background: linear-gradient(90deg, #27ae60 0%, #2ecc71 100%);
+        }
+        
+        .preview-panel {
+            padding: 20px;
+        }
+        
+        .preview-area {
+            padding: 20px;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            background-color: #fff;
+            min-height: 500px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            overflow: auto;
+        }
+        
+        .a4-container {
+            width: 794px; /* A4宽度(210mm)在96dpi下的像素值 */
+            height: 1123px; /* A4高度(297mm)在96dpi下的像素值 */
+            margin: 0 auto;
+            background-color: white;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        #copybook-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            justify-content: center;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 15px;
+            color: #7f8c8d;
+            font-size: 0.8rem;
+            border-top: 1px solid #eee;
+        }
+        
+        .print-message {
+            display: none;
+            text-align: center;
+            padding: 15px;
+            margin: 20px;
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+        
+        .page-controls {
+            display: flex;
+            justify-content: center;
+            margin-top: 15px;
+            gap: 10px;
+        }
+        
+        .print-pages {
+            display: none;
+        }
+        
+        .print-page {
+            width: 794px;
+            height: 1123px;
+            background-color: white;
+            page-break-after: always;
+            margin: 0 auto;
+            position: relative;
+        }
+        
+        .print-page canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        @media (max-width: 850px) {
+            .a4-container {
+                width: 100%;
+                height: auto;
+                aspect-ratio: 210/297;
+            }
+            
+            .print-page {
+                width: 100%;
+                height: auto;
+                aspect-ratio: 210/297;
+            }
+            
+            .settings-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+            }
+        }
+        
+        /* 打印样式优化 */
+        @media print {
+            body, html {
+                margin: 0 !important;
+                padding: 0 !important;
+                width: 100% !important;
+                height: auto !important;
+                background: white !important;
+            }
+            
+            .container {
+                box-shadow: none !important;
+                border-radius: 0 !important;
+                max-width: 100% !important;
+                width: 100% !important;
+            }
+            
+            .settings-panel, .action-buttons, header, footer, .page-controls, .preview-panel, .print-message {
+                display: none !important;
+            }
+            
+            .print-pages {
+                display: block !important;
+                width: 100% !important;
+                height: auto !important;
+            }
+            
+            .print-page {
+                width: 100% !important;
+                height: auto !important;
+                page-break-after: always !important;
+            }
+            
+            .print-page canvas {
+                width: 100% !important;
+                height: auto !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>字帖生成工具 - 多页打印修复版</h1>
+            <p class="subtitle">创建个性化字帖，支持多页打印</p>
+        </header>
+        
+        <div class="settings-panel">
+            <div class="settings-grid">
+                <div class="setting-group">
+                    <h2>文本内容</h2>
+                    <label for="input-text">输入要练习的文本</label>
+                    <textarea id="input-text" placeholder="请输入要生成字帖的文本">山不在高，有仙则名。水不在深，有龙则灵。斯是陋室，惟吾德馨。苔痕上阶绿，草色入帘青。谈笑有鸿儒，往来无白丁。可以调素琴，阅金经。无丝竹之乱耳，无案牍之劳形。南阳诸葛庐，西蜀子云亭。孔子云：何陋之有？</textarea>
+                </div>
+                
+                <div class="setting-group">
+                    <h2>字体与样式</h2>
+                    <label for="font-family">选择字体</label>
+                    <select id="font-family">
+                        <option value="SimSun">宋体</option>
+                        <option value="SimHei">黑体</option>
+                        <option value="KaiTi">楷体</option>
+                        <option value="FangSong">仿宋</option>
+                        <option value="Microsoft YaHei" selected>微软雅黑</option>
+                    </select>
+                    
+                    <label for="grid-type">格子类型</label>
+                    <select id="grid-type">
+                        <option value="standard">标准格</option>
+                        <option value="tian" selected>田字格</option>
+                        <option value="mi">米字格</option>
+                    </select>
+                    
+                    <label for="practice-mode">练习模式</label>
+                    <select id="practice-mode">
+                        <option value="trace" selected>描红模式</option>
+                        <option value="article">文章模式</option>
+                    </select>
+                </div>
+                
+                <div class="setting-group">
+                    <h2>布局设置</h2>
+                    <label for="font-size">字体大小: <span class="range-value" id="font-size-value">40px</span></label>
+                    <input type="range" id="font-size" min="20" max="80" value="40">
+                    
+                    <label for="grids-per-row">每行格子数: <span class="range-value" id="grids-per-row-value">10</span></label>
+                    <input type="range" id="grids-per-row" min="5" max="20" value="10">
+                </div>
+                
+                <div class="setting-group">
+                    <h2>颜色设置</h2>
+                    <label for="font-color">字体颜色</label>
+                    <div class="color-group">
+                        <input type="color" id="font-color" value="#000000">
+                        <div class="color-preview" id="font-color-preview"></div>
+                    </div>
+                    
+                    <label for="grid-color">格子颜色</label>
+                    <div class="color-group">
+                        <input type="color" id="grid-color" value="#cccccc">
+                        <div class="color-preview" id="grid-color-preview"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="action-buttons">
+                <button id="generate-btn">生成字帖</button>
+                <button id="print-btn" class="print-btn">打印字帖</button>
+            </div>
+        </div>
+        
+        <div class="print-message" id="print-message">
+            正在准备打印... 如果打印对话框没有自动弹出，请检查浏览器的弹出窗口设置或手动使用Ctrl+P打印。
+        </div>
+        
+        <div class="preview-panel">
+            <h2>预览 (A4纸张大小)</h2>
+            <div class="preview-area">
+                <div class="a4-container">
+                    <canvas id="copybook-canvas"></canvas>
+                </div>
+            </div>
+            
+            <div class="page-controls">
+                <button id="prev-page" disabled>上一页</button>
+                <span id="page-info">第 1 页</span>
+                <button id="next-page" disabled>下一页</button>
+            </div>
+        </div>
+        
+        <div class="print-pages" id="print-pages">
+            <!-- 打印页面将在这里动态生成 -->
+        </div>
+        
+        <footer>
+            <p>© 2023 字帖生成工具 | 支持多页打印 | 响应式设计</p>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 获取DOM元素
+            const inputText = document.getElementById('input-text');
+            const fontFamily = document.getElementById('font-family');
+            const gridType = document.getElementById('grid-type');
+            const practiceMode = document.getElementById('practice-mode');
+            const fontSize = document.getElementById('font-size');
+            const fontSizeValue = document.getElementById('font-size-value');
+            const gridsPerRow = document.getElementById('grids-per-row');
+            const gridsPerRowValue = document.getElementById('grids-per-row-value');
+            const fontColor = document.getElementById('font-color');
+            const fontColorPreview = document.getElementById('font-color-preview');
+            const gridColor = document.getElementById('grid-color');
+            const gridColorPreview = document.getElementById('grid-color-preview');
+            const generateBtn = document.getElementById('generate-btn');
+            const printBtn = document.getElementById('print-btn');
+            const printMessage = document.getElementById('print-message');
+            const prevPageBtn = document.getElementById('prev-page');
+            const nextPageBtn = document.getElementById('next-page');
+            const pageInfo = document.getElementById('page-info');
+            const canvas = document.getElementById('copybook-canvas');
+            const printPages = document.getElementById('print-pages');
+            const ctx = canvas.getContext('2d');
+            const a4Container = document.querySelector('.a4-container');
+            
+            // A4尺寸 (210mm x 297mm) 在96dpi下的像素值
+            const A4_WIDTH = 794;
+            const A4_HEIGHT = 1123;
+            
+            // 页面边距
+            const PAGE_MARGIN = 40;
+            
+            // 当前页和总页数
+            let currentPage = 1;
+            let totalPages = 1;
+            let pagesData = [];
+            
+            // 初始化颜色预览
+            fontColorPreview.style.backgroundColor = fontColor.value;
+            gridColorPreview.style.backgroundColor = gridColor.value;
+            
+            // 设置A4容器尺寸
+            a4Container.style.width = A4_WIDTH + 'px';
+            a4Container.style.height = A4_HEIGHT + 'px';
+            
+            // 事件监听
+            fontSize.addEventListener('input', function() {
+                fontSizeValue.textContent = `${this.value}px`;
+            });
+            
+            gridsPerRow.addEventListener('input', function() {
+                gridsPerRowValue.textContent = this.value;
+            });
+            
+            fontColor.addEventListener('input', function() {
+                fontColorPreview.style.backgroundColor = this.value;
+            });
+            
+            gridColor.addEventListener('input', function() {
+                gridColorPreview.style.backgroundColor = this.value;
+            });
+            
+            generateBtn.addEventListener('click', generateCopybook);
+            
+            printBtn.addEventListener('click', function() {
+                preparePrintPages();
+                printMessage.style.display = 'block';
+                
+                // 短暂延迟以确保DOM更新
+                setTimeout(function() {
+                    window.print();
+                    // 打印后隐藏消息
+                    setTimeout(function() {
+                        printMessage.style.display = 'none';
+                    }, 3000);
+                }, 100);
+            });
+            
+            prevPageBtn.addEventListener('click', function() {
+                if (currentPage > 1) {
+                    currentPage--;
+                    renderPage(currentPage);
+                    updatePageControls();
+                }
+            });
+            
+            nextPageBtn.addEventListener('click', function() {
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    renderPage(currentPage);
+                    updatePageControls();
+                }
+            });
+            
+            // 初始生成字帖
+            generateCopybook();
+            
+            // 更新页面控制按钮状态
+            function updatePageControls() {
+                prevPageBtn.disabled = currentPage <= 1;
+                nextPageBtn.disabled = currentPage >= totalPages;
+                pageInfo.textContent = `第 ${currentPage} 页 / 共 ${totalPages} 页`;
+            }
+            
+            // 准备打印页面
+            function preparePrintPages() {
+                printPages.innerHTML = '';
+                
+                for (let i = 0; i < totalPages; i++) {
+                    const pageDiv = document.createElement('div');
+                    pageDiv.className = 'print-page';
+                    
+                    const printCanvas = document.createElement('canvas');
+                    printCanvas.width = A4_WIDTH;
+                    printCanvas.height = A4_HEIGHT;
+                    
+                    const printCtx = printCanvas.getContext('2d');
+                    
+                    // 绘制背景
+                    printCtx.fillStyle = '#ffffff';
+                    printCtx.fillRect(0, 0, A4_WIDTH, A4_HEIGHT);
+                    
+                    // 获取页面数据
+                    const page = pagesData[i];
+                    
+                    // 绘制格子
+                    drawGrids(
+                        printCtx, 
+                        page.gridType, 
+                        page.gridSize, 
+                        page.cols, 
+                        page.rows, 
+                        page.gridColor
+                    );
+                    
+                    // 绘制文字
+                    if (page.practiceMode === 'trace') {
+                        drawTraceText(
+                            printCtx,
+                            page.text,
+                            page.gridSize,
+                            page.cols,
+                            page.fontSize,
+                            page.fontColor,
+                            page.font
+                        );
+                    } else {
+                        drawArticleText(
+                            printCtx,
+                            page.text,
+                            page.gridSize,
+                            page.cols,
+                            page.fontSize,
+                            page.fontColor,
+                            page.font
+                        );
+                    }
+                    
+                    pageDiv.appendChild(printCanvas);
+                    printPages.appendChild(pageDiv);
+                }
+            }
+            
+            // 生成字帖函数
+            function generateCopybook() {
+                const text = inputText.value;
+                const selectedFont = fontFamily.value;
+                const selectedGridType = gridType.value;
+                const selectedPracticeMode = practiceMode.value;
+                const size = parseInt(fontSize.value);
+                const gridsRow = parseInt(gridsPerRow.value);
+                const fColor = fontColor.value;
+                const gColor = gridColor.value;
+                
+                // 计算格子大小
+                const gridSize = size * 2;
+                
+                // 计算每页可容纳的行数和列数
+                const availableWidth = A4_WIDTH - (PAGE_MARGIN * 2);
+                const availableHeight = A4_HEIGHT - (PAGE_MARGIN * 2);
+                
+                const cols = Math.floor(availableWidth / gridSize);
+                const rows = Math.floor(availableHeight / gridSize);
+                
+                // 计算总页数
+                const charsPerPage = cols * rows;
+                totalPages = Math.ceil(text.length / charsPerPage);
+                
+                // 重置页面数据
+                pagesData = [];
+                currentPage = 1;
+                
+                // 设置Canvas尺寸
+                canvas.width = A4_WIDTH;
+                canvas.height = A4_HEIGHT;
+                
+                // 分割文本到各页
+                for (let i = 0; i < totalPages; i++) {
+                    const start = i * charsPerPage;
+                    const end = Math.min(start + charsPerPage, text.length);
+                    const pageText = text.substring(start, end);
+                    
+                    pagesData.push({
+                        text: pageText,
+                        cols: cols,
+                        rows: rows,
+                        gridSize: gridSize,
+                        font: selectedFont,
+                        gridType: selectedGridType,
+                        practiceMode: selectedPracticeMode,
+                        fontSize: size,
+                        fontColor: fColor,
+                        gridColor: gColor
+                    });
+                }
+                
+                // 渲染第一页
+                renderPage(1);
+                updatePageControls();
+            }
+            
+            // 渲染指定页面
+            function renderPage(pageNum) {
+                if (pageNum < 1 || pageNum > totalPages) return;
+                
+                const page = pagesData[pageNum - 1];
+                if (!page) return;
+                
+                // 清空画布
+                ctx.clearRect(0, 0, A4_WIDTH, A4_HEIGHT);
+                
+                // 设置背景色
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, A4_WIDTH, A4_HEIGHT);
+                
+                // 绘制格子
+                drawGrids(ctx, page.gridType, page.gridSize, page.cols, page.rows, page.gridColor);
+                
+                // 绘制文字
+                if (page.practiceMode === 'trace') {
+                    drawTraceText(
+                        ctx,
+                        page.text,
+                        page.gridSize,
+                        page.cols,
+                        page.fontSize,
+                        page.fontColor,
+                        page.font
+                    );
+                } else {
+                    drawArticleText(
+                        ctx,
+                        page.text,
+                        page.gridSize,
+                        page.cols,
+                        page.fontSize,
+                        page.fontColor,
+                        page.font
+                    );
+                }
+            }
+            
+            // 绘制格子
+            function drawGrids(ctx, type, gridSize, cols, rows, color) {
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 1;
+                
+                const startX = PAGE_MARGIN;
+                const startY = PAGE_MARGIN;
+                
+                for (let i = 0; i <= cols; i++) {
+                    const x = startX + i * gridSize;
+                    ctx.beginPath();
+                    ctx.moveTo(x, startY);
+                    ctx.lineTo(x, startY + rows * gridSize);
+                    ctx.stroke();
+                }
+                
+                for (let j = 0; j <= rows; j++) {
+                    const y = startY + j * gridSize;
+                    ctx.beginPath();
+                    ctx.moveTo(startX, y);
+                    ctx.lineTo(startX + cols * gridSize, y);
+                    ctx.stroke();
+                }
+                
+                if (type === 'tian' || type === 'mi') {
+                    // 绘制田字格中间的十字
+                    for (let i = 0; i < cols; i++) {
+                        for (let j = 0; j < rows; j++) {
+                            const x = startX + i * gridSize;
+                            const y = startY + j * gridSize;
+                            
+                            ctx.beginPath();
+                            ctx.moveTo(x, y + gridSize / 2);
+                            ctx.lineTo(x + gridSize, y + gridSize / 2);
+                            ctx.stroke();
+                            
+                            ctx.beginPath();
+                            ctx.moveTo(x + gridSize / 2, y);
+                            ctx.lineTo(x + gridSize / 2, y + gridSize);
+                            ctx.stroke();
+                        }
+                    }
+                }
+                
+                if (type === 'mi') {
+                    // 绘制米字格的斜线
+                    for (let i = 0; i < cols; i++) {
+                        for (let j = 0; j < rows; j++) {
+                            const x = startX + i * gridSize;
+                            const y = startY + j * gridSize;
+                            
+                            ctx.beginPath();
+                            ctx.moveTo(x, y);
+                            ctx.lineTo(x + gridSize, y + gridSize);
+                            ctx.stroke();
+                            
+                            ctx.beginPath();
+                            ctx.moveTo(x + gridSize, y);
+                            ctx.lineTo(x, y + gridSize);
+                            ctx.stroke();
+                        }
+                    }
+                }
+            }
+            
+            // 绘制描红文字
+            function drawTraceText(ctx, text, gridSize, cols, size, color, font) {
+                ctx.font = `bold ${size}px ${font}`;
+                ctx.fillStyle = color;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.globalAlpha = 0.3; // 半透明用于描红
+                
+                const startX = PAGE_MARGIN;
+                const startY = PAGE_MARGIN;
+                
+                for (let i = 0; i < text.length; i++) {
+                    const char = text[i];
+                    const col = i % cols;
+                    const row = Math.floor(i / cols);
+                    
+                    const x = startX + col * gridSize + gridSize / 2;
+                    const y = startY + row * gridSize + gridSize / 2;
+                    
+                    ctx.fillText(char, x, y);
+                }
+                
+                ctx.globalAlpha = 1; // 恢复不透明度
+            }
+            
+            // 绘制文章模式文字
+            function drawArticleText(ctx, text, gridSize, cols, size, color, font) {
+                ctx.font = `${size}px ${font}`;
+                ctx.fillStyle = color;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                const startX = PAGE_MARGIN;
+                const startY = PAGE_MARGIN;
+                
+                for (let i = 0; i < text.length; i++) {
+                    const char = text[i];
+                    const col = i % cols;
+                    const row = Math.floor(i / cols);
+                    
+                    const x = startX + col * gridSize + gridSize / 2;
+                    const y = startY + row * gridSize + gridSize / 2;
+                    
+                    ctx.fillText(char, x, y);
+                }
+            }
+            
+            // 监听打印事件
+            window.addEventListener('afterprint', function() {
+                printMessage.style.display = 'none';
+            });
+        });
+    </script>
+</body>
+</html>
